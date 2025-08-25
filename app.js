@@ -1,0 +1,28 @@
+import cookieParser from "cookie-parser";
+import express from "express";
+import cors from "cors";
+const app = express();
+
+const allowedOrigin = ["http://localhost:5173"];
+
+app.use(
+  cors({
+    origin: function (origin, callBack) {
+      if (!origin || allowedOrigin.includes(origin)) {
+        callBack(null, true);
+      } else {
+        callBack(new Error("Not allowed by cors"));
+      }
+    },
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(cookieParser());
+
+import userroute from "./routes/user.routes.js";
+import paymentRouter from "./routes/payment.routes.js";
+app.use("/user", userroute);
+app.use("/api", paymentRouter);
+
+export default app;
