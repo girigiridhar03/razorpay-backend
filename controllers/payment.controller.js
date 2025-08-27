@@ -2,6 +2,7 @@ import { Payment } from "../models/payment.js";
 import { User } from "../models/user.model.js";
 import { PLAN_DETAILS } from "../utils/constants.js";
 import { instance } from "../utils/razorpayInstance.js";
+import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils";
 import crypto from "crypto";
 
 export const createOrder = async (req, res) => {
@@ -69,17 +70,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// {razorpay_payment_id: 'pay_R9Abc4IGX5aTKC', razorpay_order_id: 'order_R9AbD6isUzwpCZ', razorpay_signature: '24d141a175a1cf844e68614b80a2895de0f1856e3feffe15d835ce28c7045ab0'}
-// razorpay_order_id
-// :
-// "order_R9AbD6isUzwpCZ"
-// razorpay_payment_id
-// :
-// "pay_R9Abc4IGX5aTKC"
-// razorpay_signature
-// :
-// "24d141a175a1cf844e68614b80a2895de0f1856e3feffe15d835ce28c7045ab0"
-
 export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
@@ -133,6 +123,58 @@ export const verifyPayment = async (req, res) => {
       success: false,
       statusCode: 500,
       message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const webhook = async (req, res) => {
+  try {
+    const webhookSecret = process.env.WEBHOOK_SECRET;
+    const webhookSignature = req.headers["x-razorpay-signature"];
+
+    const isValidWebHook = validateWebhookSignature(
+      JSON.stringify(req.body),
+      webhookSignature,
+      webhookSecret
+    );
+
+    if (!isValidWebHook) {
+      return req.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: "Webhook signatured is invalid",
+      });
+    }
+
+    const paymentDetails = req.body.payload.payment.entity;
+
+    const payment = await Payment.findOne({
+      orderId: paymentDetails?.order_id,
+    });
+
+    if (req.body.event === "payment.captured") {
+      if (payment) {
+        payment.paymenttype = "webhook";
+        await payment.save();
+      }
+    }
+
+    if (req.body.event === "payment.failed") {
+      if (payment) {
+        (payment.status = "failed"), (payment.paymenttype = "webhook");
+        await payment.save();
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Webhook is recieved",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: error.message || "Internal Server error",
     });
   }
 };
