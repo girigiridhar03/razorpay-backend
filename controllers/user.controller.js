@@ -79,10 +79,11 @@ export const login = async (req, res) => {
 
     const options = {
       httpOnly: true,
-      sameSite: "Strict",
-      maxAge: 24 * 60 * 60 * 1000,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     };
-
     res.status(201).cookie("token", token, options).json({
       success: true,
       statusCode: 201,
