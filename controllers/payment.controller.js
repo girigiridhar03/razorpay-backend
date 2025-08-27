@@ -12,8 +12,6 @@ export const createOrder = async (req, res) => {
     const receipt = `order_receipt_${Date.now()}`;
     const planDetails = PLAN_DETAILS[plan];
 
-    console.log("plandetails", planDetails);
-
     const user = await User.findById(userId);
 
     if (!planDetails) {
@@ -151,7 +149,7 @@ export const webhook = async (req, res) => {
     const payment = await Payment.findOne({
       orderId: paymentDetails?.order_id,
     });
-
+    console.log("------------>".req.body.event, paymentDetails, payment);
     if (req.body.event === "payment.captured") {
       if (payment) {
         payment.paymenttype = "webhook";
