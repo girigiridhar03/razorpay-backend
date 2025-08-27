@@ -53,6 +53,7 @@ const paymentSchema = new mongoose.Schema(
     paymenttype: {
       type: String,
       enum: ["manual", "webhook"],
+      default: "manual",
     },
   },
   {

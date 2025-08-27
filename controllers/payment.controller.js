@@ -165,9 +165,11 @@ export const webhook = async (req, res) => {
 
     if (data.event === "payment.captured") {
       if (payment) {
-        payment.paymenttype = "webhook";
-        await payment.save();
-
+        await Payment.findOneAndUpdate(
+          { orderId: paymentDetails.order_id },
+          { $set: { paymenttype: "webhook", status: "paid" } },
+          { new: true }
+        );
         const updated = await Payment.findById(payment._id);
         console.log("Updated paymenttype:", updated.paymenttype);
       }
@@ -175,9 +177,11 @@ export const webhook = async (req, res) => {
 
     if (data.event === "payment.failed") {
       if (payment) {
-        payment.status = "failed";
-        payment.paymenttype = "webhook";
-        await payment.save();
+        await Payment.findOneAndUpdate(
+          { orderId: paymentDetails.order_id },
+          { $set: { paymenttype: "webhook", status: "failed" } },
+          { new: true }
+        );
       }
     }
 
