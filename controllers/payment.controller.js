@@ -154,12 +154,22 @@ export const webhook = async (req, res) => {
       orderId: paymentDetails?.order_id,
     });
 
-    console.log("------------>", data.event, paymentDetails, payment);
+    console.log(
+      "------------>",
+      data.event,
+      "paymentDetails: ",
+      paymentDetails,
+      "DbpaymentDtails: ",
+      payment
+    );
 
     if (data.event === "payment.captured") {
       if (payment) {
         payment.paymenttype = "webhook";
         await payment.save();
+
+        const updated = await Payment.findById(payment._id);
+        console.log("Updated paymenttype:", updated.paymenttype);
       }
     }
 
