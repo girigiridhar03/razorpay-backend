@@ -130,43 +130,49 @@ export const webhook = async (req, res) => {
     const webhookSecret = process.env.WEBHOOK_SECRET;
     const webhookSignature = req.headers["x-razorpay-signature"];
 
+    const body = req.body.toString(); // convert raw Buffer to string
+
     const isValidWebHook = validateWebhookSignature(
-      JSON.stringify(req.body),
+      body,
       webhookSignature,
       webhookSecret
     );
 
     if (!isValidWebHook) {
-      return req.status(400).json({
+      return res.status(400).json({
         success: false,
         statusCode: 400,
-        message: "Webhook signatured is invalid",
+        message: "Webhook signature is invalid",
       });
     }
 
-    const paymentDetails = req.body.payload.payment.entity;
+    const data = JSON.parse(body); // now parse JSON
+    const paymentDetails = data.payload.payment.entity;
 
     const payment = await Payment.findOne({
       orderId: paymentDetails?.order_id,
     });
-    console.log("------------>".req.body.event, paymentDetails, payment);
-    if (req.body.event === "payment.captured") {
+
+    console.log("------------>", data.event, paymentDetails, payment);
+
+    if (data.event === "payment.captured") {
       if (payment) {
         payment.paymenttype = "webhook";
         await payment.save();
       }
     }
 
-    if (req.body.event === "payment.failed") {
+    if (data.event === "payment.failed") {
       if (payment) {
-        (payment.status = "failed"), (payment.paymenttype = "webhook");
+        payment.status = "failed";
+        payment.paymenttype = "webhook";
         await payment.save();
       }
     }
 
     return res.status(200).json({
       success: true,
-      message: "Webhook is recieved",
+      message: "Webhook is received",
     });
   } catch (error) {
     res.status(500).json({
@@ -176,3 +182,4 @@ export const webhook = async (req, res) => {
     });
   }
 };
+
