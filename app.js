@@ -17,14 +17,7 @@ app.use(
     credentials: true,
   })
 );
-// ✅ Skip express.json() for webhook
-app.use((req, res, next) => {
-  if (req.originalUrl === "/payment/webhook") {
-    next(); // don’t parse body, let express.raw() handle it
-  } else {
-    express.json()(req, res, next);
-  }
-});
+app.use(express.json());
 app.use(cookieParser());
 
 import userroute from "./routes/user.routes.js";
