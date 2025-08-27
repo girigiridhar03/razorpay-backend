@@ -126,6 +126,7 @@ export const verifyPayment = async (req, res) => {
 };
 
 export const webhook = async (req, res) => {
+  console.log("Webhook hit! Raw body:", req.body);
   try {
     const webhookSecret = process.env.WEBHOOK_SECRET;
     const webhookSignature = req.headers["x-razorpay-signature"];
@@ -170,10 +171,7 @@ export const webhook = async (req, res) => {
       }
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Webhook is received",
-    });
+    return res.status(200).json({ success: true });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -182,4 +180,3 @@ export const webhook = async (req, res) => {
     });
   }
 };
-
