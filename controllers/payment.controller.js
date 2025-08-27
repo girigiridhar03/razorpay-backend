@@ -2,7 +2,7 @@ import { Payment } from "../models/payment.js";
 import { User } from "../models/user.model.js";
 import { PLAN_DETAILS } from "../utils/constants.js";
 import { instance } from "../utils/razorpayInstance.js";
-import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils";
+import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils.js";
 import crypto from "crypto";
 
 export const createOrder = async (req, res) => {
