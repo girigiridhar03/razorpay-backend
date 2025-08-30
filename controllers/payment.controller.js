@@ -1,5 +1,6 @@
 import { Payment } from "../models/payment.js";
 import { User } from "../models/user.model.js";
+import { MemberShipDetails } from "../models/memberShip.model.js";
 import { PLAN_DETAILS } from "../utils/constants.js";
 import { instance } from "../utils/razorpayInstance.js";
 import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils.js";
@@ -153,25 +154,27 @@ export const webhook = async (req, res) => {
     const payment = await Payment.findOne({
       orderId: paymentDetails?.order_id,
     });
-
-    console.log(
-      "------------>",
-      data.event,
-      "paymentDetails: ",
-      paymentDetails,
-      "DbpaymentDtails: ",
-      payment
-    );
-
+    const user = await User.findById(payment.userid);
+    const newMembership = new MemberShipDetails({
+      userId: user?._id,
+      plan: payment.plan,
+    });
     if (data.event === "payment.captured") {
       if (payment) {
-        // await Payment.findOneAndUpdate(
-        //   { orderId: paymentDetails.order_id },
-        //   { $set: { paymenttype: "webhook", status: "paid" } },
-        //   { new: true }
-        // );
+        const startDate = new Date(payment?.notes?.startDate);
+        const endDate = new Date(payment?.notes?.endDate);
+        const diffTime = endDate - startDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         payment.status = "paid";
         payment.paymenttype = "webhook";
+        newMembership.startDate = payment?.notes?.startDate;
+        newMembership.endDate = payment?.notes?.endDate;
+        newMembership.validDays = diffDays;
+        newMembership.status = "active";
+        await newMembership.save();
+        user.isPremium = true;
+        user.currentMemberShipId = newMembership?._id;
+        await user.save();
         await payment.save();
         const updated = await Payment.findById(payment._id);
         console.log("Updated paymenttype:", updated.paymenttype);
@@ -180,11 +183,9 @@ export const webhook = async (req, res) => {
 
     if (data.event === "payment.failed") {
       if (payment) {
-        await Payment.findOneAndUpdate(
-          { orderId: paymentDetails.order_id },
-          { $set: { paymenttype: "webhook", status: "failed" } },
-          { new: true }
-        );
+        payment.status = "failed";
+        payment.paymenttype = "webhook";
+        await payment.save();
       }
     }
 
