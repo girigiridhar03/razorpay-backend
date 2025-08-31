@@ -128,12 +128,15 @@ export const verifyPayment = async (req, res) => {
 
 export const webhook = async (req, res) => {
   console.log("Webhook hit! Raw body:", req.body, process.env.WEBHOOK_SECRET);
+
   try {
     const webhookSecret = process.env.WEBHOOK_SECRET;
     const webhookSignature = req.headers["x-razorpay-signature"];
 
+    // Ensure body is raw string
     const body = req.body.toString("utf-8");
 
+    // Validate Razorpay signature
     const isValidWebHook = validateWebhookSignature(
       body,
       webhookSignature,
@@ -153,52 +156,68 @@ export const webhook = async (req, res) => {
 
     console.log("------------->", data);
     console.log("paymentDetails: ", data.payload);
+
     const payment = await Payment.findOne({
       orderId: paymentDetails?.order_id,
     });
+    if (!payment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Payment not found" });
+    }
+
     const user = await User.findById(payment.userid);
-    const newMembership = new MemberShipDetails({
-      userId: user?._id,
-      plan: payment.plan,
-    });
-    console.log("data event: ", data.event);
-    console.log("payement: ", payment);
-    console.log("user: ", user);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
     if (data.event === "payment.captured") {
-      console.log("captured.")
-      if (payment) {
-        console.log("entered into payment")
-        const startDate = new Date(payment?.notes?.startDate);
-        const endDate = new Date(payment?.notes?.endDate);
-        const diffTime = endDate - startDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        payment.status = "paid";
-        payment.paymenttype = "webhook";
-        newMembership.startDate = payment?.notes?.startDate;
-        newMembership.endDate = payment?.notes?.endDate;
-        newMembership.validDays = diffDays;
-        newMembership.status = "active";
-        await newMembership.save();
-        user.isPremium = true;
-        user.currentMemberShipId = newMembership?._id;
-        await user.save();
-        await payment.save();
-        const updated = await Payment.findById(payment._id);
-        console.log("Updated paymenttype:", updated.paymenttype);
-      }
+      console.log("✅ Payment captured");
+
+      payment.status = "paid";
+      payment.paymenttype = "webhook";
+
+      // Membership creation
+      const newMembership = new MemberShipDetails({
+        userId: user._id,
+        plan: payment.notes?.plan || payment.plan,
+        startDate: payment.notes?.startDate,
+        endDate: payment.notes?.endDate,
+        validDays:
+          payment.notes?.startDate && payment.notes?.endDate
+            ? Math.ceil(
+                (payment.notes.endDate - payment.notes.startDate) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : null,
+        status: "active",
+      });
+
+      await newMembership.save();
+
+      user.isPremium = true;
+      user.currentMemberShipId = newMembership._id;
+
+      await user.save();
+      await payment.save();
+
+      console.log("✅ Payment & membership updated");
     }
 
     if (data.event === "payment.failed") {
-      if (payment) {
-        payment.status = "failed";
-        payment.paymenttype = "webhook";
-        await payment.save();
-      }
+      console.log("❌ Payment failed");
+
+      payment.status = "failed";
+      payment.paymenttype = "webhook";
+      await payment.save();
     }
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({
+    console.error("Webhook error:", error);
+    return res.status(500).json({
       success: false,
       statusCode: 500,
       message: error.message || "Internal Server error",
