@@ -165,7 +165,9 @@ export const webhook = async (req, res) => {
     console.log("payement: ", payment);
     console.log("user: ", user);
     if (data.event === "payment.captured") {
+      console.log("captured.")
       if (payment) {
+        console.log("entered into payment")
         const startDate = new Date(payment?.notes?.startDate);
         const endDate = new Date(payment?.notes?.endDate);
         const diffTime = endDate - startDate;
