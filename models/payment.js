@@ -62,7 +62,7 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.pre("save", function (next) {
-  if (this.isModified("status") && this.status === "paid") {
+  if (this.isModified("status")) {
     const planDetails = PLAN_DETAILS[this.notes.plan];
 
     if (planDetails) {
