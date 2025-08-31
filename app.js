@@ -28,6 +28,6 @@ app.use(cookieParser());
 import userroute from "./routes/user.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
 app.use("/user", userroute);
-app.use("/payment", express.raw({ type: "application/json" }), paymentRouter);
+app.use("/payment", paymentRouter);
 
 export default app;
