@@ -149,9 +149,10 @@ export const webhook = async (req, res) => {
     }
 
     const data = JSON.parse(body); // now parse JSON
-    console.log("------------->", data);
     const paymentDetails = data.payload.payment.entity;
 
+    console.log("------------->", data);
+    console.log("paymentDetails: ", data.payload);
     const payment = await Payment.findOne({
       orderId: paymentDetails?.order_id,
     });
