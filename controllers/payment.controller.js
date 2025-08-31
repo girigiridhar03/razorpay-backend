@@ -178,25 +178,21 @@ export const webhook = async (req, res) => {
 
       payment.status = "paid";
       payment.paymenttype = "webhook";
-
-      // Membership creation
-      const newMembership = new MemberShipDetails({
-        userId: user._id,
-        plan: payment.notes?.plan || payment.plan,
-        startDate: payment.notes?.startDate,
-        endDate: payment.notes?.endDate,
-        validDays:
-          payment.notes?.startDate && payment.notes?.endDate
-            ? Math.ceil(
-                (payment.notes.endDate - payment.notes.startDate) /
-                  (1000 * 60 * 60 * 24)
-              )
-            : null,
+      console.log("payment : ", payment);
+      const membership = new MemberShipDetails({
+        userId: payment.userid,
+        plan: payment.notes.plan,
+        startDate: payment.notes.startDate, // already set in Payment pre-save
+        endDate: payment.notes.endDate, // already set in Payment pre-save
+        validDays: Math.ceil(
+          (new Date(payment.notes.endDate) -
+            new Date(payment.notes.startDate)) /
+            (1000 * 60 * 60 * 24)
+        ),
         status: "active",
       });
 
-      await newMembership.save();
-
+      await membership.save();
       user.isPremium = true;
       user.currentMemberShipId = newMembership._id;
 
