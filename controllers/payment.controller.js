@@ -175,6 +175,11 @@ export const webhook = async (req, res) => {
 
     if (data.event === "payment.captured") {
       console.log("✅ Payment captured");
+      const planDetails = PLAN_DETAILS[payment.notes.plan];
+      const startDate = new Date(payment.notes.startDate);
+      const endDate = new Date(
+        startDate.getTime() + planDetails.duration * 24 * 60 * 60 * 1000
+      );
 
       payment.status = "paid";
       payment.paymenttype = "webhook";
@@ -182,13 +187,9 @@ export const webhook = async (req, res) => {
       const membership = new MemberShipDetails({
         userId: payment.userid,
         plan: payment.notes.plan,
-        startDate: payment.notes.startDate, // already set in Payment pre-save
-        endDate: payment.notes.endDate, // already set in Payment pre-save
-        validDays: Math.ceil(
-          (new Date(payment.notes.endDate) -
-            new Date(payment.notes.startDate)) /
-            (1000 * 60 * 60 * 24)
-        ),
+        startDate,
+        endDate,
+        validDays: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)),
         status: "active",
       });
 

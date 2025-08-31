@@ -61,20 +61,20 @@ const paymentSchema = new mongoose.Schema(
   }
 );
 
-paymentSchema.pre("save", function (next) {
-  if (this.isModified("status")) {
-    const planDetails = PLAN_DETAILS[this.notes.plan];
+// paymentSchema.pre("save", function (next) {
+//   if (this.isModified("status") && this.status === "paid") {
+//     const planDetails = PLAN_DETAILS[this.notes.plan];
 
-    if (planDetails) {
-      const start = this.notes.startDate || new Date();
-      this.notes.startDate = start;
-      this.notes.endDate = new Date(
-        start.getTime() + planDetails.duration * 24 * 60 * 60 * 1000
-      );
-      this.amount = planDetails.price;
-    }
-  }
-  next();
-});
+//     if (planDetails) {
+//       const start = this.notes.startDate || new Date();
+//       this.notes.startDate = start;
+//       this.notes.endDate = new Date(
+//         start.getTime() + planDetails.duration * 24 * 60 * 60 * 1000
+//       );
+//       this.amount = planDetails.price;
+//     }
+//   }
+//   next();
+// });
 
 export const Payment = mongoose.model("Payment", paymentSchema);
