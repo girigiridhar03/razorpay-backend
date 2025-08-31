@@ -127,16 +127,11 @@ export const verifyPayment = async (req, res) => {
 };
 
 export const webhook = async (req, res) => {
-  console.log("Webhook hit! Raw body:", req.body, process.env.WEBHOOK_SECRET);
-
   try {
     const webhookSecret = process.env.WEBHOOK_SECRET;
     const webhookSignature = req.headers["x-razorpay-signature"];
 
-    // Ensure body is raw string
-    const body = req.body.toString("utf-8");
-
-    // Validate Razorpay signature
+    const body = req.body.toString("utf-8"); // req.body is Buffer if express.raw
     const isValidWebHook = validateWebhookSignature(
       body,
       webhookSignature,
@@ -144,38 +139,39 @@ export const webhook = async (req, res) => {
     );
 
     if (!isValidWebHook) {
-      return res.status(400).json({
-        success: false,
-        statusCode: 400,
-        message: "Webhook signature is invalid",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid signature" });
     }
 
-    const data = JSON.parse(body); // now parse JSON
+    const data = JSON.parse(body);
     const paymentDetails = data.payload.payment.entity;
-
-    console.log("------------->", data);
-    console.log("paymentDetails: ", data.payload);
 
     const payment = await Payment.findOne({
       orderId: paymentDetails?.order_id,
     });
-    if (!payment) {
+    if (!payment)
       return res
         .status(404)
         .json({ success: false, message: "Payment not found" });
-    }
 
     const user = await User.findById(payment.userid);
-    if (!user) {
+    if (!user)
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
-    }
 
     if (data.event === "payment.captured") {
       console.log("✅ Payment captured");
+
       const planDetails = PLAN_DETAILS[payment.notes.plan];
+      if (!planDetails) {
+        console.error("Invalid plan:", payment.notes.plan);
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid plan" });
+      }
+
       const startDate = new Date(payment.notes.startDate);
       const endDate = new Date(
         startDate.getTime() + planDetails.duration * 24 * 60 * 60 * 1000
@@ -183,7 +179,7 @@ export const webhook = async (req, res) => {
 
       payment.status = "paid";
       payment.paymenttype = "webhook";
-      console.log("payment : ", payment);
+
       const membership = new MemberShipDetails({
         userId: payment.userid,
         plan: payment.notes.plan,
@@ -195,17 +191,15 @@ export const webhook = async (req, res) => {
 
       await membership.save();
       user.isPremium = true;
-      user.currentMemberShipId = newMembership._id;
+      user.currentMemberShipId = membership._id;
 
       await user.save();
       await payment.save();
-
-      console.log("✅ Payment & membership updated");
+      console.log("payment updated")
     }
 
     if (data.event === "payment.failed") {
       console.log("❌ Payment failed");
-
       payment.status = "failed";
       payment.paymenttype = "webhook";
       await payment.save();
@@ -214,10 +208,6 @@ export const webhook = async (req, res) => {
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
-    return res.status(500).json({
-      success: false,
-      statusCode: 500,
-      message: error.message || "Internal Server error",
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
