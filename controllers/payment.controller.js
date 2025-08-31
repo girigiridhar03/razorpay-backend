@@ -160,6 +160,9 @@ export const webhook = async (req, res) => {
       userId: user?._id,
       plan: payment.plan,
     });
+    console.log("data event: ", data.event);
+    console.log("payement: ", payment);
+    console.log("user: ", user);
     if (data.event === "payment.captured") {
       if (payment) {
         const startDate = new Date(payment?.notes?.startDate);
