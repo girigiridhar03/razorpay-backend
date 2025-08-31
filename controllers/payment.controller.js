@@ -132,7 +132,7 @@ export const webhook = async (req, res) => {
     const webhookSecret = process.env.WEBHOOK_SECRET;
     const webhookSignature = req.headers["x-razorpay-signature"];
 
-    const body = JSON.stringify(req.body);
+    const body = req.body.toString("utf-8");
 
     const isValidWebHook = validateWebhookSignature(
       body,

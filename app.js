@@ -17,12 +17,17 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.originalUrl === "/payment/webhook") {
+    return next();
+  }
+  return express.json()(req, res, next);
+});
 app.use(cookieParser());
 
 import userroute from "./routes/user.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
 app.use("/user", userroute);
-app.use("/payment", paymentRouter);
+app.use("/payment", express.raw({ type: "application/json" }), paymentRouter);
 
 export default app;
